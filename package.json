@@ -10,11 +10,11 @@
     "guida": "bin/index.js"
   },
   "scripts": {
-    "build": "npm-run-all --sequential build:*",
+    "build": "npm-run-all --sequential build:wasm build:bin build:node build:browser",
+    "build:wasm": "./scripts/build-wasm.sh",
+    "build:bin": "./scripts/build.sh bin",
     "build:node": "./scripts/build.sh node",
     "build:browser": "./scripts/build.sh browser",
-    "build:bin": "./scripts/build.sh bin",
-    "build:wasm": "./scripts/build-wasm.sh",
     "watch": "onchange \"src/**/*.elm\" -- npm run build:bin",
     "test": "npm-run-all --sequential test:*",
     "test:eslint": "eslint",

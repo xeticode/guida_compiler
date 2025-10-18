@@ -21,7 +21,7 @@ wasmCompiler
   .init()
   .then(() => {
     if (wasmCompiler.isWasmAvailable()) {
-      console.error("✓ WASM acceleration enabled");
+      // console.error("✓ WASM acceleration enabled");
     }
   })
   .catch(() => {
