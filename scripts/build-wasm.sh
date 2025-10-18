@@ -1,11 +1,26 @@
 #!/bin/sh
 
+# Build WebAssembly modules for Guida compiler optimization
+
 set -e
 
-echo "=================================================="
-echo "Building WASM Modules for Guida Compiler"
-echo "=================================================="
-echo ""
+echo "Building WASM modules..."
+
+# Ensure output directory exists
+mkdir -p lib/wasm
+
+# Build release version (optimized)
+echo "  → Building release WASM..."
+npx asc assembly/core-ops.ts --target release --config asconfig.json
+
+# Get file sizes
+if [ -f lib/wasm/guida-core.wasm ]; then
+  release_size=$(wc -c < lib/wasm/guida-core.wasm | tr -d ' ')
+  echo "✓ Release WASM built: ${release_size} bytes"
+fi
+
+echo "WASM build complete!"
+
 
 # Check if AssemblyScript is available
 if ! command -v asc &> /dev/null; then
