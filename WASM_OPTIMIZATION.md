@@ -12,12 +12,11 @@ The Guida compiler now includes WebAssembly (WASM) modules that accelerate criti
 
 The implementation uses a **hybrid JavaScript + WASM architecture**:
 
-- **JavaScript handles**: 
+- **JavaScript handles**:
   - File I/O and system calls
   - Complex control flow
   - Dynamic function dispatch
   - Elm-specific data structures
-  
 - **WASM handles**:
   - String operations (map, filter, reverse, indexOf)
   - Array operations (map, fold, slice, append)
@@ -51,12 +50,14 @@ The implementation uses a **hybrid JavaScript + WASM architecture**:
 ### String Operations
 
 #### `_String_reverse`
+
 - **Before**: Character-by-character array building with surrogate pair handling
 - **After**: WASM linear memory operations with bulk copying
 - **Speedup**: ~3-4x faster
 - **Usage**: Used in text transformations and code formatting
 
 #### `_String_indexes`
+
 - **Before**: Multiple `indexOf` calls with string scanning
 - **After**: WASM Boyer-Moore-style string search
 - **Speedup**: ~2-3x faster
@@ -65,6 +66,7 @@ The implementation uses a **hybrid JavaScript + WASM architecture**:
 ### Array Operations
 
 #### `_JsArray_map` / `_JsArray_foldl`
+
 - **Note**: These keep JavaScript callbacks for compatibility
 - **Optimization**: Memory layout and caching improvements
 - **Future**: Consider WASM with function table callbacks
@@ -72,6 +74,7 @@ The implementation uses a **hybrid JavaScript + WASM architecture**:
 ### Comparison Operations
 
 #### Deep Equality
+
 - **Implementation**: WASM-based structural comparison with stack management
 - **Usage**: Type checking and pattern matching
 - **Benefit**: Reduced GC pressure, faster nested comparisons
@@ -84,8 +87,8 @@ The implementation uses a **hybrid JavaScript + WASM architecture**:
 // WASM initialization happens automatically
 // Fallback to JS if WASM unavailable
 
-if (typeof WebAssembly !== 'undefined') {
-  _initWasm();  // Called once on load
+if (typeof WebAssembly !== "undefined") {
+  _initWasm(); // Called once on load
 }
 ```
 
@@ -100,7 +103,11 @@ function _String_reverse(str) {
       // WASM implementation
       var input = _copyStringToWasm(str);
       var outputPtr = _WASM_MODULE.allocate(input.len * 2);
-      var resultLen = _WASM_MODULE.stringReverse(input.ptr, input.len, outputPtr);
+      var resultLen = _WASM_MODULE.stringReverse(
+        input.ptr,
+        input.len,
+        outputPtr
+      );
       var result = _copyStringFromWasm(outputPtr, resultLen);
       _WASM_MODULE.deallocate(input.ptr);
       _WASM_MODULE.deallocate(outputPtr);
@@ -109,7 +116,7 @@ function _String_reverse(str) {
       // Fall through to JS
     }
   }
-  
+
   // Original JavaScript implementation
   // ... existing code ...
 }
@@ -120,6 +127,7 @@ function _String_reverse(str) {
 ### Updated Build Scripts
 
 #### `scripts/build.sh`
+
 ```bash
 # Compile Elm to JavaScript
 guida make --optimize --output=$js $elm_entry
@@ -138,6 +146,7 @@ node scripts/inject-wasm.js $min
 ```
 
 #### `scripts/build-wasm.sh`
+
 ```bash
 # Build WASM from AssemblyScript
 npx asc assembly/core-ops.ts --target release --config asconfig.json
@@ -161,30 +170,30 @@ npx asc assembly/core-ops.ts --target release --config asconfig.json
 
 ### String Operations
 
-| Operation | Size | JavaScript | WASM | Speedup |
-|-----------|------|------------|------|---------|
-| `String.reverse` | 1KB | 0.8ms | 0.2ms | 4x |
-| `String.reverse` | 100KB | 45ms | 12ms | 3.75x |
-| `String.indexOf` | 10K searches | 12ms | 3ms | 4x |
-| `String.map` (toUpper) | 10KB | 5ms | 1.5ms | 3.3x |
+| Operation              | Size         | JavaScript | WASM  | Speedup |
+| ---------------------- | ------------ | ---------- | ----- | ------- |
+| `String.reverse`       | 1KB          | 0.8ms      | 0.2ms | 4x      |
+| `String.reverse`       | 100KB        | 45ms       | 12ms  | 3.75x   |
+| `String.indexOf`       | 10K searches | 12ms       | 3ms   | 4x      |
+| `String.map` (toUpper) | 10KB         | 5ms        | 1.5ms | 3.3x    |
 
 ### Array Operations
 
-| Operation | Size | JavaScript | WASM | Speedup |
-|-----------|------|------------|------|---------|
-| Array.slice | 10K elements | 2ms | 0.3ms | 6.7x |
-| Array.append | 5K + 5K | 3ms | 0.4ms | 7.5x |
-| Deep equality | 1K nested | 8ms | 1ms | 8x |
+| Operation     | Size         | JavaScript | WASM  | Speedup |
+| ------------- | ------------ | ---------- | ----- | ------- |
+| Array.slice   | 10K elements | 2ms        | 0.3ms | 6.7x    |
+| Array.append  | 5K + 5K      | 3ms        | 0.4ms | 7.5x    |
+| Deep equality | 1K nested    | 8ms        | 1ms   | 8x      |
 
 ### Real-World Impact
 
-| Compilation Task | Before | After | Improvement |
-|------------------|--------|-------|-------------|
-| Small module (500 LOC) | 85ms | 58ms | 32% faster |
-| Medium module (5K LOC) | 1.2s | 0.7s | 42% faster |
-| Large project (50K LOC) | 18s | 11s | 39% faster |
+| Compilation Task        | Before | After | Improvement |
+| ----------------------- | ------ | ----- | ----------- |
+| Small module (500 LOC)  | 85ms   | 58ms  | 32% faster  |
+| Medium module (5K LOC)  | 1.2s   | 0.7s  | 42% faster  |
+| Large project (50K LOC) | 18s    | 11s   | 39% faster  |
 
-*Benchmarks on Node.js v20, Apple M1, averaged over 100 runs*
+_Benchmarks on Node.js v20, Apple M1, averaged over 100 runs_
 
 ## Memory Management
 
@@ -218,20 +227,20 @@ try {
 
 ### Environments
 
-| Environment | WASM Support | Fallback | Status |
-|-------------|--------------|----------|--------|
-| Node.js ≥14 | ✅ Native | ✅ JS | Full support |
-| Node.js 12-13 | ⚠️ Flag | ✅ JS | Supported |
-| Chrome/Edge | ✅ Native | ✅ JS | Full support |
-| Firefox | ✅ Native | ✅ JS | Full support |
-| Safari | ✅ Native | ✅ JS | Full support |
+| Environment   | WASM Support | Fallback | Status       |
+| ------------- | ------------ | -------- | ------------ |
+| Node.js ≥14   | ✅ Native    | ✅ JS    | Full support |
+| Node.js 12-13 | ⚠️ Flag      | ✅ JS    | Supported    |
+| Chrome/Edge   | ✅ Native    | ✅ JS    | Full support |
+| Firefox       | ✅ Native    | ✅ JS    | Full support |
+| Safari        | ✅ Native    | ✅ JS    | Full support |
 
 ### Feature Detection
 
 ```javascript
 var _WASM_INITIALIZED = false;
 
-if (typeof WebAssembly !== 'undefined') {
+if (typeof WebAssembly !== "undefined") {
   try {
     // Synchronous instantiation
     var wasmModule = new WebAssembly.Module(wasmBytes);
@@ -272,10 +281,10 @@ node tests/wasm-ops.test.js
 
 ```javascript
 // Enable WASM logging
-process.env.DEBUG_WASM = '1';
+process.env.DEBUG_WASM = "1";
 
 // Disable WASM (test fallback)
-process.env.DISABLE_WASM = '1';
+process.env.DISABLE_WASM = "1";
 ```
 
 ## Source Files
@@ -304,11 +313,13 @@ bin/
 ### Planned Optimizations
 
 1. **Lexer Tokenization** (Phase 2)
+
    - Full tokenizer in WASM
    - Estimated 5-8x speedup
    - Target: Q1 2026
 
 2. **Type Checking Hot Paths** (Phase 3)
+
    - Constraint solving
    - Unification algorithm
    - Target: Q2 2026
@@ -337,6 +348,7 @@ export function stringMapSIMD(ptr: i32, len: i32): i32 {
 **Problem**: "WASM module not found" or instantiation errors
 
 **Solutions**:
+
 1. Check `lib/wasm/guida-core.wasm` exists
 2. Rebuild: `npm run build:wasm`
 3. Check file permissions
@@ -347,6 +359,7 @@ export function stringMapSIMD(ptr: i32, len: i32): i32 {
 **Problem**: No speedup visible
 
 **Solutions**:
+
 1. Verify WASM loaded: Check console for "WASM runtime initialized"
 2. Profile: Use `--prof` to check which implementation is used
 3. Benchmark: Run `npm run benchmark`
@@ -357,6 +370,7 @@ export function stringMapSIMD(ptr: i32, len: i32): i32 {
 **Problem**: AssemblyScript compilation errors
 
 **Solutions**:
+
 1. Update AssemblyScript: `npm install assemblyscript@latest`
 2. Check TypeScript syntax in `assembly/`
 3. Clear cache: `rm -rf node_modules/.cache`

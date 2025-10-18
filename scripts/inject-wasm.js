@@ -2,38 +2,38 @@
 
 /**
  * WASM Injection Script
- * 
+ *
  * This script injects WASM-optimized string and array operations into the
  * compiled Guida compiler JavaScript output. It replaces hot-path JavaScript
  * functions with calls to WebAssembly equivalents for significant performance gains.
  */
 
-const fs = require('node:fs');
-const path = require('node:path');
+const fs = require("node:fs");
+const path = require("node:path");
 
 const argv = process.argv.slice(2);
 const jsPath = argv[0];
 
 if (!jsPath) {
-  console.error('Usage: node inject-wasm.js <path-to-js-file>');
+  console.error("Usage: node inject-wasm.js <path-to-js-file>");
   process.exit(1);
 }
 
 console.log(`Injecting WASM optimizations into: ${jsPath}`);
 
 // Read the JavaScript file
-let code = fs.readFileSync(jsPath, { encoding: 'utf8', flag: 'r' });
+let code = fs.readFileSync(jsPath, { encoding: "utf8", flag: "r" });
 
 // Read the WASM file (base64 encoded for embedding)
-const wasmPath = path.join(__dirname, '..', 'lib', 'wasm', 'guida-core.wasm');
-let wasmBase64 = '';
+const wasmPath = path.join(__dirname, "..", "lib", "wasm", "guida-core.wasm");
+let wasmBase64 = "";
 
 if (fs.existsSync(wasmPath)) {
   const wasmBuffer = fs.readFileSync(wasmPath);
-  wasmBase64 = wasmBuffer.toString('base64');
+  wasmBase64 = wasmBuffer.toString("base64");
   console.log(`WASM module loaded: ${wasmBuffer.length} bytes`);
 } else {
-  console.warn('WASM module not found, skipping WASM injection');
+  console.warn("WASM module not found, skipping WASM injection");
   process.exit(0);
 }
 
@@ -293,10 +293,10 @@ code = code.replace(
 );
 
 // Write modified code back
-fs.writeFileSync(jsPath, code, { encoding: 'utf8', flag: 'w' });
+fs.writeFileSync(jsPath, code, { encoding: "utf8", flag: "w" });
 
-console.log('✓ WASM injection completed successfully');
-console.log('  - WASM runtime loader injected');
-console.log('  - String operations optimized');
-console.log('  - Array operations optimized');
-console.log('  - Fallback to JavaScript maintained');
+console.log("✓ WASM injection completed successfully");
+console.log("  - WASM runtime loader injected");
+console.log("  - String operations optimized");
+console.log("  - Array operations optimized");
+console.log("  - Fallback to JavaScript maintained");
