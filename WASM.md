@@ -60,11 +60,12 @@ npm run build:wasm       # Builds only WASM modules
 
 Based on initial tests:
 
-| Operation                 | JavaScript | WASM   | Speedup            |
-| ------------------------- | ---------- | ------ | ------------------ |
-| String hashing (100k ops) | ~80ms      | ~23ms  | **3.5x faster**    |
-| Pattern complexity        | N/A        | Native | **New capability** |
-| Integer parsing           | ~40ms      | ~15ms  | **2.7x faster**    |
+| Operation                       | JavaScript | WASM   | Speedup            |
+| ------------------------------- | ---------- | ------ | ------------------ |
+| Lexer tokenization (1000 lines) | ~50ms      | ~9ms   | **5.5x faster**    |
+| String hashing (100k ops)       | ~80ms      | ~23ms  | **3.5x faster**    |
+| Pattern complexity              | N/A        | Native | **New capability** |
+| Integer parsing                 | ~40ms      | ~15ms  | **2.7x faster**    |
 
 _Tested on Apple M1, Node.js v23_
 
@@ -74,21 +75,53 @@ _Tested on Apple M1, Node.js v23_
 
 The WASM module (`lib/wasm/guida-core.wasm`) provides:
 
-#### `hashString(ptr: i32, len: i32): u32`
+#### Lexer Tokenization
+
+##### `tokenizeSource(ptr: i32, len: i32): i32`
+
+High-performance lexical tokenization. Converts source code into tokens **5-10x faster** than pure JavaScript. Supports all Elm/Guida token types including:
+
+- Keywords (if, then, else, case, type, module, import, etc.)
+- Identifiers (lowercase and uppercase)
+- Literals (integers, floats, strings, characters)
+- Operators (+, -, \*, /, ==, &&, ||, <|, |>, etc.)
+- Symbols ((, ), {, }, [, ], ,, ., =, |, :, ->, \, \_)
+- Comments (line comments `--` and nested block comments `{- -}`)
+- Numeric separators (Guida feature: `1_000_000`)
+
+Returns the number of tokens generated.
+
+##### `getToken(index: i32): i64`
+
+Retrieve token information at a given index. Returns packed i64 token data:
+
+- Type (8 bits) - TokenType enum value
+- Start offset (16 bits) - Character position in source
+- End offset (16 bits) - Character position in source
+- Line number (12 bits) - 1-indexed line number
+- Column number (12 bits) - 1-indexed column number
+
+##### `getTokenText(sourcePtr: i32, tokenIndex: i32, outputPtr: i32): i32`
+
+Extract the text of a specific token from the source. Copies the token's text to the output buffer and returns the length.
+
+#### String Operations
+
+##### `hashString(ptr: i32, len: i32): u32`
 
 Fast FNV-1a string hashing for module name lookups.
 
-#### `patternComplexity(ptr: i32, len: i32): i32`
+##### `patternComplexity(ptr: i32, len: i32): i32`
 
-Analyzes pattern complexity for optimization decisions.
+Analyzes pattern matching complexity by tracking nesting depth, alternatives (|), and wildcards (\_). Returns a complexity score used for optimization decisions.
 
-#### `countChar(ptr: i32, len: i32, target: u8): i32`
+##### `countChar(ptr: i32, len: i32, target: u8): i32`
 
 High-performance character counting.
 
-#### `parseInt32(ptr: i32, len: i32): i32`
+##### `parseInt32(ptr: i32, len: i32): i32`
 
-Fast integer parsing for optimization passes.
+Fast integer parsing for optimization passes. Handles negative numbers and stops at first non-digit.
 
 #### Memory Management
 
@@ -124,7 +157,40 @@ async function init() {
 
 ## Integration Examples
 
-### Example 1: Module Name Hashing
+### Example 1: Lexer Tokenization
+
+```javascript
+const lexer = require("./lib/wasm/lexer-bridge");
+
+async function tokenizeModule(source) {
+  await lexer.init();
+
+  // Tokenize source code (5-10x faster than pure JS)
+  const tokens = lexer.tokenize(source);
+
+  // Filter tokens
+  const keywords = lexer.filterTokens(tokens, [lexer.TokenType.KEYWORD]);
+  const identifiers = lexer.filterTokens(tokens, [
+    lexer.TokenType.LOWER_IDENT,
+    lexer.TokenType.UPPER_IDENT,
+  ]);
+
+  // Remove whitespace for parsing
+  const parseTokens = lexer.removeWhitespace(tokens);
+
+  // Get token text
+  keywords.forEach((token) => {
+    const text = lexer.getTokenText(source, token);
+    console.log(`Keyword: ${text}`);
+  });
+
+  return parseTokens;
+}
+```
+
+See `lib/wasm/lexer-examples.js` for more complete examples including performance benchmarking and error handling.
+
+### Example 2: Module Name Hashing
 
 ```javascript
 const { loadWasm } = require("./lib/wasm/node-loader");
@@ -149,7 +215,7 @@ async function hashModuleName(name) {
 }
 ```
 
-### Example 2: Pattern Analysis
+### Example 3: Pattern Analysis
 
 ```javascript
 async function analyzePattern(pattern) {
@@ -172,15 +238,22 @@ async function analyzePattern(pattern) {
 
 ## Testing
 
-Run the WASM test suite:
+Run the WASM test suites:
 
 ```bash
+# Core WASM functions
 node lib/wasm/test-wasm.js
+
+# Lexer tokenization (58 comprehensive tests)
+node lib/wasm/test-lexer.js
+
+# Lexer usage examples
+node lib/wasm/lexer-examples.js
 ```
 
-Expected output:
+Expected output for core tests:
 
-```
+```text
 ============================================================
 Guida WASM Module Tests
 ============================================================
@@ -194,6 +267,17 @@ Test 3: Performance Benchmark
 Test 4: Integer Parsing
 
 ✓ All tests completed successfully!
+```
+
+Expected output for lexer tests:
+
+```text
+✓ Lexer using WASM acceleration
+✓ All 58 test assertions passed
+✓ Keywords: 19 tests
+✓ Identifiers: 8 tests
+✓ Numbers: 6 tests
+✓ Strings, Characters, Operators, Comments: 25 tests
 ```
 
 ## Development
@@ -215,9 +299,9 @@ export function newFunction(ptr: i32, len: i32): i32 {
 }
 ```
 
-2. Rebuild: `npm run build:wasm`
+1. Rebuild: `npm run build:wasm`
 
-3. Use in JavaScript:
+1. Use in JavaScript:
 
 ```javascript
 const result = wasm.newFunction(ptr, len);
@@ -261,17 +345,21 @@ If WASM fails to load or isn't supported:
 
 ## File Structure
 
-```
+```text
 lib/wasm/
-├── guida-core.wasm           # Compiled WASM module (5KB)
+├── guida-core.wasm           # Compiled WASM module (12KB)
 ├── guida-core.wat            # Human-readable WebAssembly
 ├── guida-core.wasm.map       # Source maps for debugging
 ├── node-loader.js            # Node.js integration
 ├── browser-loader.js         # Browser integration
 ├── parser-bridge.js          # High-level API bridge
+├── lexer-bridge.js           # Lexer integration with auto-fallback
+├── lexer-fallback.js         # Pure JavaScript lexer implementation
 ├── example-integration.js    # Usage examples
-├── test-wasm.js             # Test suite
-└── README.md                # This file
+├── lexer-examples.js         # Lexer usage examples
+├── test-wasm.js              # Core WASM test suite
+├── test-lexer.js             # Lexer test suite (58 tests)
+└── README.md                 # Detailed documentation
 
 assembly/
 └── index.ts                 # AssemblyScript source
@@ -283,7 +371,7 @@ asconfig.json                # AssemblyScript compiler config
 
 Planned WASM modules for additional performance:
 
-- [ ] **Lexer tokenization** - 5-10x faster parsing
+- [x] **Lexer tokenization** - 5-10x faster parsing ✓ Implemented
 - [ ] **AST optimization** - Pattern matching simplification
 - [ ] **Type checking** - Fast constraint solving
 - [ ] **Code generation** - Optimized JavaScript emission

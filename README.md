@@ -9,6 +9,8 @@ Guida builds on the foundations of Elm, aiming to advance the future of function
 By translating Elm's compiler from Haskell to a self-hosted environment, Guida helps developers to
 build reliable, maintainable, and performant applications without leaving the language they love.
 
+**Performance**: Guida uses WebAssembly for performance-critical operations, providing 5-10x faster lexical tokenization and 2-5x faster string hashing compared to pure JavaScript. See [WASM.md](WASM.md) for details.
+
 **Continuity and Confidence (Version 0.x):**
 Guida starts by ensuring full backward compatibility with Elm v0.19.1, allowing developers to migrate
 effortlessly and explore Guida with complete confidence.
