@@ -23,11 +23,11 @@ WASM modules provide:
 ### Node.js
 
 ```javascript
-const { loadWasm } = require('./wasm/node-loader');
+const { loadWasm } = require("./wasm/node-loader");
 
 async function compile(source) {
   const wasm = await loadWasm();
-  
+
   if (wasm) {
     // Use WASM functions
     const hash = wasm.hashString(ptr, len);
@@ -40,7 +40,7 @@ async function compile(source) {
 ### Browser
 
 ```javascript
-import { loadWasm } from './wasm/browser-loader.js';
+import { loadWasm } from "./wasm/browser-loader.js";
 
 async function initCompiler() {
   const wasm = await loadWasm();
@@ -80,13 +80,13 @@ DEBUG_WASM=1 node your-script.js
 
 ## Performance Benchmarks
 
-| Operation | JavaScript | WASM | Speedup |
-|-----------|-----------|------|---------|
-| String hashing (10k ops) | 12ms | 3ms | 4x |
-| Pattern complexity | 8ms | 1ms | 8x |
-| Integer parsing | 5ms | 2ms | 2.5x |
+| Operation                | JavaScript | WASM | Speedup |
+| ------------------------ | ---------- | ---- | ------- |
+| String hashing (10k ops) | 12ms       | 3ms  | 4x      |
+| Pattern complexity       | 8ms        | 1ms  | 8x      |
+| Integer parsing          | 5ms        | 2ms  | 2.5x    |
 
-*Benchmarks on Node.js v20, Apple M1*
+_Benchmarks on Node.js v20, Apple M1_
 
 ## Compatibility
 
