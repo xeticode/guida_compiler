@@ -281,6 +281,98 @@ code = code.replace(
 });`
 );
 
+// Optimize _JsArray_slice with WASM
+code = code.replace(
+  /var _JsArray_slice = F3\(function\(from, to, array\)\s*\{[\s\S]*?\}\);/,
+  `var _JsArray_slice = F3(function(from, to, array)
+{
+\tif (_WASM_INITIALIZED && array.length > 100) {
+\t\ttry {
+\t\t\tvar len = to - from;
+\t\t\tif (len <= 0) return [];
+\t\t\t
+\t\t\t// Check if array contains only numbers (i32)
+\t\t\tvar isNumeric = typeof array[0] === 'number';
+\t\t\tif (isNumeric) {
+\t\t\t\tvar input = _copyArrayToWasm(array);
+\t\t\t\tvar outputPtr = _WASM_MODULE.allocate(len * 4);
+\t\t\t\tvar resultLen = _WASM_MODULE.arraySlice(input.ptr, from, to, outputPtr);
+\t\t\t\tvar result = _copyArrayFromWasm(outputPtr, resultLen);
+\t\t\t\t_WASM_MODULE.deallocate(input.ptr);
+\t\t\t\t_WASM_MODULE.deallocate(outputPtr);
+\t\t\t\treturn result;
+\t\t\t}
+\t\t} catch (e) {
+\t\t\t// Fall through to JS implementation
+\t\t}
+\t}
+\t
+\t// Original JavaScript implementation
+\treturn array.slice(from, to);
+});`
+);
+
+// Optimize _JsArray_appendN with WASM
+code = code.replace(
+  /var _JsArray_appendN = F3\(function\(n, dest, source\)\s*\{[\s\S]*?return result;\s*\}\);/,
+  `var _JsArray_appendN = F3(function(n, dest, source)
+{
+\tif (_WASM_INITIALIZED && (dest.length > 50 || source.length > 50)) {
+\t\ttry {
+\t\t\tvar destLen = dest.length;
+\t\t\tvar itemsToCopy = n - destLen;
+
+\t\t\tif (itemsToCopy > source.length)
+\t\t\t{
+\t\t\t\titemsToCopy = source.length;
+\t\t\t}
+
+\t\t\tvar size = destLen + itemsToCopy;
+\t\t\t
+\t\t\t// Check if arrays contain only numbers (i32)
+\t\t\tvar isNumeric = typeof dest[0] === 'number' && (source.length === 0 || typeof source[0] === 'number');
+\t\t\tif (isNumeric) {
+\t\t\t\tvar destInput = _copyArrayToWasm(dest);
+\t\t\t\tvar sourceInput = _copyArrayToWasm(source.slice(0, itemsToCopy));
+\t\t\t\tvar outputPtr = _WASM_MODULE.allocate(size * 4);
+\t\t\t\tvar resultLen = _WASM_MODULE.arrayAppend(destInput.ptr, destLen, sourceInput.ptr, itemsToCopy, outputPtr);
+\t\t\t\tvar result = _copyArrayFromWasm(outputPtr, resultLen);
+\t\t\t\t_WASM_MODULE.deallocate(destInput.ptr);
+\t\t\t\t_WASM_MODULE.deallocate(sourceInput.ptr);
+\t\t\t\t_WASM_MODULE.deallocate(outputPtr);
+\t\t\t\treturn result;
+\t\t\t}
+\t\t} catch (e) {
+\t\t\t// Fall through to JS implementation
+\t\t}
+\t}
+\t
+\t// Original JavaScript implementation
+\tvar destLen = dest.length;
+\tvar itemsToCopy = n - destLen;
+
+\tif (itemsToCopy > source.length)
+\t{
+\t\titemsToCopy = source.length;
+\t}
+
+\tvar size = destLen + itemsToCopy;
+\tvar result = new Array(size);
+
+\tfor (var i = 0; i < destLen; i++)
+\t{
+\t\tresult[i] = dest[i];
+\t}
+
+\tfor (var i = 0; i < itemsToCopy; i++)
+\t{
+\t\tresult[i + destLen] = source[i];
+\t}
+
+\treturn result;
+});`
+);
+
 // Add comment about WASM optimization
 const optimizationNote = `
 // Note: This build includes WebAssembly optimizations for critical runtime operations.
@@ -297,6 +389,10 @@ fs.writeFileSync(jsPath, code, { encoding: "utf8", flag: "w" });
 
 console.log("✓ WASM injection completed successfully");
 console.log("  - WASM runtime loader injected");
-console.log("  - String operations optimized");
-console.log("  - Array operations optimized");
+console.log(
+  "  - String operations optimized (_String_reverse, _String_indexes)"
+);
+console.log(
+  "  - Array operations optimized (_JsArray_slice, _JsArray_appendN)"
+);
 console.log("  - Fallback to JavaScript maintained");

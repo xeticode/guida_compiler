@@ -43,6 +43,15 @@ if (hasStringReverse) {
   process.exit(1);
 }
 
+// Check for _String_indexes optimization
+const hasStringIndexes = guidaCode.includes("_WASM_MODULE.stringIndexOf");
+if (hasStringIndexes) {
+  console.log("   ✓ _String_indexes optimized with WASM");
+} else {
+  console.error("   ✗ _String_indexes not optimized");
+  process.exit(1);
+}
+
 // Check for fallback implementation
 const hasFallback = guidaCode.includes("// Original JavaScript implementation");
 if (hasFallback) {
@@ -52,8 +61,29 @@ if (hasFallback) {
   process.exit(1);
 }
 
-// Test 3: WASM binary embedded
-console.log("\n3. WASM Binary:");
+// Test 3: Array operations optimization
+console.log("\n3. Array Operations:");
+
+// Check for _JsArray_slice optimization
+const hasArraySlice = guidaCode.includes("_WASM_MODULE.arraySlice");
+if (hasArraySlice) {
+  console.log("   ✓ _JsArray_slice optimized with WASM");
+} else {
+  console.error("   ✗ _JsArray_slice not optimized");
+  process.exit(1);
+}
+
+// Check for _JsArray_appendN optimization
+const hasArrayAppend = guidaCode.includes("_WASM_MODULE.arrayAppend");
+if (hasArrayAppend) {
+  console.log("   ✓ _JsArray_appendN optimized with WASM");
+} else {
+  console.error("   ✗ _JsArray_appendN not optimized");
+  process.exit(1);
+}
+
+// Test 4: WASM binary embedded
+console.log("\n4. WASM Binary:");
 const hasWasmBase64 = guidaCode.includes("var wasmBase64 = 'AGFzbQEA");
 if (hasWasmBase64) {
   console.log("   ✓ WASM binary embedded as base64");
@@ -62,8 +92,8 @@ if (hasWasmBase64) {
   process.exit(1);
 }
 
-// Test 4: Memory helpers
-console.log("\n4. Memory Helpers:");
+// Test 5: Memory helpers
+console.log("\n5. Memory Helpers:");
 const helpers = [
   "_copyStringToWasm",
   "_copyStringFromWasm",
@@ -85,8 +115,8 @@ if (!allHelpersPresent) {
   process.exit(1);
 }
 
-// Test 5: File size check
-console.log("\n5. File Size:");
+// Test 6: File size check
+console.log("\n6. File Size:");
 const stats = fs.statSync(guidaPath);
 const sizeKB = (stats.size / 1024).toFixed(2);
 console.log(`   File size: ${sizeKB} KB`);
@@ -98,8 +128,8 @@ if (stats.size > 0) {
   process.exit(1);
 }
 
-// Test 6: Check minified version
-console.log("\n6. Minified Version:");
+// Test 7: Check minified version
+console.log("\n7. Minified Version:");
 const minPath = path.join(__dirname, "..", "bin", "guida.min.js");
 if (fs.existsSync(minPath)) {
   const minCode = fs.readFileSync(minPath, "utf8");
@@ -123,8 +153,8 @@ if (fs.existsSync(minPath)) {
 console.log("\n" + "=".repeat(50));
 console.log("\n✓ All WASM integration tests passed!\n");
 
-// Test 7: Runtime test (if possible)
-console.log("7. Runtime Test:");
+// Test 8: Runtime test (if possible)
+console.log("8. Runtime Test:");
 try {
   // Try to execute a simple function
   eval(guidaCode);
