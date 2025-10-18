@@ -85,7 +85,9 @@ server.post("getLine", (request) => {
 });
 
 server.post("hPutStr", (request) => {
-  const fd = parseInt(request.requestHeaders.getHeader("fd"));
+  const fd = wasmCompiler.isWasmAvailable()
+    ? wasmCompiler.parseInt32(request.requestHeaders.getHeader("fd"))
+    : parseInt(request.requestHeaders.getHeader("fd"));
 
   fs.write(fd, request.body, (err) => {
     if (err) throw err;
@@ -232,13 +234,17 @@ server.post("withCreateProcess", (request) => {
 });
 
 server.post("hClose", (request) => {
-  const fd = parseInt(request.body);
+  const fd = wasmCompiler.isWasmAvailable()
+    ? wasmCompiler.parseInt32(request.body)
+    : parseInt(request.body);
   fs.close(fd);
   request.respond(200);
 });
 
 server.post("waitForProcess", (request) => {
-  const ph = parseInt(request.body);
+  const ph = wasmCompiler.isWasmAvailable()
+    ? wasmCompiler.parseInt32(request.body)
+    : parseInt(request.body);
   processes[ph].on("exit", (code) => {
     request.respond(200, null, code);
   });
@@ -307,7 +313,10 @@ server.post("unlockFile", (request) => {
 server.post("dirGetModificationTime", (request) => {
   fs.stat(request.body, (err, stats) => {
     if (err) throw err;
-    request.respond(200, null, parseInt(stats.mtimeMs, 10));
+    const time = wasmCompiler.isWasmAvailable()
+      ? wasmCompiler.parseInt32(Math.floor(stats.mtimeMs).toString())
+      : parseInt(stats.mtimeMs, 10);
+    request.respond(200, null, time);
   });
 });
 
